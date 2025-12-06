@@ -138,7 +138,7 @@ def train(args, model, train_loader, full_graph, cui2name_full, optimizer, crite
                 max_nodes=50
             )  # [B]，每个元素是子图（NetworkX对象）
 
-            print(f"2hop subgraph 提取完成，开始转换成PyG数据...")
+            # print(f"2hop subgraph 提取完成，开始转换成PyG数据...")
 
             # --------------------------
             # 4. 批量转换为PyG数据（复用已有函数）
@@ -154,7 +154,7 @@ def train(args, model, train_loader, full_graph, cui2name_full, optimizer, crite
                 project_layer=text_projector
             )
 
-            print(f"转换为PyG数据结束，进入grasper模块...")
+            # print(f"转换为PyG数据结束，进入grasper模块...")
 
             # --------------------------
             # 5. 批量生成多模态嵌入和链路损失
@@ -215,11 +215,14 @@ def validate(args, tokenizer, LLM, model, val_loader, full_graph, cui2name_full,
             B = len(question_text)
 
             # 1. 批量提取关键词
-            batch_keywords = [list(set(fast_extract_matched_entities(q, args.graph_path))) for q in question_text]
+            batch_keywords = []
+            for q in question_text:
+                keywords = fast_extract_matched_entities(q, args.index_path)
+                batch_keywords.append(list(set(keywords)))
 
-            # 2. 批量映射CUI
-            batch_matched_cuis = [map_keywords_to_cuis_new(kw, name_to_cuis) for kw in batch_keywords]
-            
+                # 2. 批量映射CUI
+            batch_matched_cuis = map_keywords_to_cuis_new(batch_keywords, name_to_cuis)
+
             # 检查是否所有问题都没有提取到实体
             has_entities = any(len(cuis) > 0 for cuis in batch_matched_cuis)
             
@@ -236,7 +239,7 @@ def validate(args, tokenizer, LLM, model, val_loader, full_graph, cui2name_full,
                 batch_subgraphs = batch_get_2hop_subgraph(
                     full_graph=full_graph,
                     batch_matched_cuis=batch_matched_cuis,
-                    max_nodes=500
+                    max_nodes=50
                 )
 
                 # 4. 批量转换为PyG数据
@@ -260,8 +263,8 @@ def validate(args, tokenizer, LLM, model, val_loader, full_graph, cui2name_full,
             # 后续流程（与train相同）
             question_embedding = model.question_embeder(question_text)
             the_prompt, moe_loss = model.cross_modality_MHA(multimodal_emb, question_embedding)
-            input_embeds = torch.cat([question_embedding.unsqueeze(1), the_prompt], dim=1)
-            outputs = model.model(input_embeds=input_embeds, output_hidden_states=True)
+            input_embeds = torch.cat([question_embedding, the_prompt], dim=1)
+            outputs = model.model(inputs_embeds=input_embeds, output_hidden_states=True)
 
             hidden_states = outputs.hidden_states[-1]
             cls_hidden = hidden_states[:, -1, :]
@@ -298,11 +301,14 @@ def test(args, model, test_loader, full_graph, criterion, name_to_cuis, text_pro
             B = len(question_text)
 
             # 1. 批量提取关键词
-            batch_keywords = [list(set(fast_extract_matched_entities(q, r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/umls_old/processed_umls_big1500000.pkl"))) for q in question_text]
+            batch_keywords = []
+            for q in question_text:
+                keywords = fast_extract_matched_entities(q, args.index_path)
+                batch_keywords.append(list(set(keywords)))  # 去重后存入批量列表
 
             # 2. 批量映射CUI
-            batch_matched_cuis = [map_keywords_to_cuis_new(kw, name_to_cuis) for kw in batch_keywords]
-            
+            batch_matched_cuis = map_keywords_to_cuis_new(batch_keywords, name_to_cuis)
+
             # 检查是否所有问题都没有提取到实体
             has_entities = any(len(cuis) > 0 for cuis in batch_matched_cuis)
             
@@ -319,7 +325,7 @@ def test(args, model, test_loader, full_graph, criterion, name_to_cuis, text_pro
                 batch_subgraphs = batch_get_2hop_subgraph(
                     full_graph=full_graph,
                     batch_matched_cuis=batch_matched_cuis,
-                    max_nodes=500
+                    max_nodes=50
                 )
 
                 # 4. 批量转换为PyG数据
@@ -340,11 +346,11 @@ def test(args, model, test_loader, full_graph, criterion, name_to_cuis, text_pro
                     triples_list=batch_triples
                 )
 
-            # 后续流程（与train相同）
+
             question_embedding = model.question_embeder(question_text)
             the_prompt, moe_loss = model.cross_modality_MHA(multimodal_emb, question_embedding)
-            input_embeds = torch.cat([question_embedding.unsqueeze(1), the_prompt], dim=1)
-            outputs = model.model(input_embeds=input_embeds, output_hidden_states=True)
+            input_embeds = torch.cat([question_embedding, the_prompt], dim=1)
+            outputs = model.model(inputs_embeds=input_embeds, output_hidden_states=True)
 
             hidden_states = outputs.hidden_states[-1]
             cls_hidden = hidden_states[:, -1, :]
@@ -413,9 +419,6 @@ def main(args):
 
     args.n_ntype = global_n_ntype
     args.n_etype = global_n_etype + 1
-
-    print(args.n_ntype)
-    print(args.n_etype)
 
     # 初始化模型
     text_project_layer = nn.Linear(2560, args.gnn_in_dim).to(device)

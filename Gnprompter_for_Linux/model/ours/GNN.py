@@ -10,32 +10,6 @@ from torch.autograd import Variable
 from torch_scatter import scatter
 
 
-# def make_one_hot(labels, C):
-#     """One-Hot编码（添加索引裁剪，彻底避免CUDA越界）"""
-#     # 强制裁剪labels到[0, C-1]（核心兜底）
-#     labels = torch.clamp(labels, 0, C - 1)
-#     # 构建One-Hot矩阵
-#     one_hot = torch.FloatTensor(labels.size(0), C).zero_().to(labels.device)
-#     one_hot.scatter_(1, labels.unsqueeze(1), 1)
-#     return one_hot
-
-# def make_one_hot(labels, C):
-#     '''
-#     Converts an integer label torch.autograd.Variable to a one-hot Variable.
-#     labels : torch.autograd.Variable of torch.cuda.LongTensor
-#         (N, ), where N is batch size.
-#         Each value is an integer representing correct classification.
-#     C : integer.
-#         number of classes in labels.
-#     Returns : torch.autograd.Variable of torch.cuda.FloatTensor
-#         N x C, where C is class number. One-hot encoded.
-#         N x C, where C is class number. One-hot encoded.
-#     '''
-#     labels = labels.unsqueeze(1)
-#     one_hot = torch.FloatTensor(labels.size(0), C).zero_().to(labels.device)
-#     target = one_hot.scatter_(1, labels.data, 1)
-#     target = Variable(target)
-#     return target
 
 def make_one_hot(labels, C):
     # 确保labels是长整型张量
@@ -98,9 +72,9 @@ class GATConvE(MessagePassing):
         edge_vec = torch.cat([edge_vec, self_edge_vec], dim=0)  # [E+N, ?]
         headtail_vec = torch.cat([headtail_vec, self_headtail_vec], dim=0)  # [E+N, ?]
 
-        print(torch.cat([edge_vec, headtail_vec], dim=1).shape)
+        # print(torch.cat([edge_vec, headtail_vec], dim=1).shape)
         edge_embeddings = self.edge_encoder(torch.cat([edge_vec, headtail_vec], dim=1))  # [E+N, emb_dim]
-        print(edge_embeddings.shape)
+        # print(edge_embeddings.shape)
 
         # Add self loops to edge_index
         loop_index = torch.arange(0, x.size(0), dtype=torch.long, device=edge_index.device)
@@ -189,11 +163,11 @@ class GAT(nn.Module):
             self.end_conv = GATConv(hidden_channels * heads, out_channels, heads=1, concat=False, dropout=0.6)
 
     def forward(self, args, x, edge_index, edge_type, node_type):
-        print("=" * 50)
-        print(f"node_type 尺寸: {node_type.size()}")  # 应该是 [N,]，N是节点数
-        print(f"edge_index 尺寸: {edge_index.size()}")  # 应该是 [2, E]，E是边数
-        print(f"edge_index[0]（源节点索引）范围: [{edge_index[0].min().item()}, {edge_index[0].max().item()}]")
-        print(f"edge_index[1]（目标节点索引）范围: [{edge_index[1].min().item()}, {edge_index[1].max().item()}]")
+        # print("=" * 50)
+        # print(f"node_type 尺寸: {node_type.size()}")  # 应该是 [N,]，N是节点数
+        # print(f"edge_index 尺寸: {edge_index.size()}")  # 应该是 [2, E]，E是边数
+        # print(f"edge_index[0]（源节点索引）范围: [{edge_index[0].min().item()}, {edge_index[0].max().item()}]")
+        # print(f"edge_index[1]（目标节点索引）范围: [{edge_index[1].min().item()}, {edge_index[1].max().item()}]")
 
         # 校验源节点索引是否超出 node_type 的尺寸（核心校验）
         num_nodes = node_type.size(0)

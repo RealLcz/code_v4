@@ -106,7 +106,7 @@ def fast_extract_matched_entities(question_text, index_path="umls_entity_index_1
     # 兜底：若候选集为空（极端情况），取前1000个实体做模糊匹配（避免漏匹配）
     if not candidate_entities:
         candidate_entities = set(all_entities[:1000])
-    print(f"筛选后候选实体数：{len(candidate_entities)}（原实体数：{len(all_entities)}）")
+    # print(f"筛选后候选实体数：{len(candidate_entities)}（原实体数：{len(all_entities)}）")
 
     # 5. 候选集模糊匹配（只对候选集处理，大幅减少计算量）
     matched_entities = []
@@ -134,10 +134,10 @@ def fast_extract_matched_entities(question_text, index_path="umls_entity_index_1
             except Exception as e:
                 continue
 
-    if len(matched_entities) == 0:
-        print(f"没有匹配到实体")
+    # if len(matched_entities) == 0:
+    #     print(f"没有匹配到实体")
 
-    print(matched_entities)
+    # print(matched_entities)
 
     return matched_entities
 
@@ -195,7 +195,7 @@ def get_2hop_subgraph(G, matched_cuis, max_nodes=50):
             # 如果没有匹配的CUI，从图中随机选择5个节点作为种子
             import random
             valid_cuis = random.sample(list(G.nodes()), min(5, len(G)))
-            print(f"没有匹配的CUI，随机选择了{len(valid_cuis)}个节点作为种子")
+            # print(f"没有匹配的CUI，随机选择了{len(valid_cuis)}个节点作为种子")
         elif not valid_cuis:
             return G.subgraph([]).copy()  # 图为空的情况
 
@@ -244,7 +244,7 @@ def get_2hop_subgraph(G, matched_cuis, max_nodes=50):
 
             # 检查子图是否有边，如果没有，添加一些额外的节点
             if len(subgraph.edges()) == 0 and len(subgraph_nodes) > 0:
-                print(f"警告: 提取的子图没有边，尝试扩展节点集")
+                # print(f"警告: 提取的子图没有边，尝试扩展节点集")
                 # 从原始图中找到与现有节点相关的更多节点
                 extended_nodes = set(subgraph_nodes)
                 # for node in subgraph_nodes:

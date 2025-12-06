@@ -79,7 +79,7 @@ def umls_graph_to_pyg_data_subgraph(args, subgraph, tokenizer, model, project_la
         # 有边子图：转置为 [2, E] 并确保内存连续
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
 
-    print(edge_index.shape)
+    # print(edge_index.shape)
     # 6. 节点类型（使用全局映射，禁止动态修改映射表）
     sem_type_ids = [subgraph.nodes[cui]["sem_type_id"] for cui in cui_list]
     node_type = []
@@ -195,9 +195,9 @@ def batch_umls_graph_to_pyg_data(batch_subgraphs, args, device, tokenizer, model
         batch_text_attrs.append(text_attrs)
         batch_triples_list.append(triples)
 
-        # 打印日志
-        if subgraph.number_of_edges() == 0:
-            print(f"警告：第{i}个子图无边缘，节点数：{subgraph.number_of_nodes()}")
+        # # 打印日志
+        # if subgraph.number_of_edges() == 0:
+        #     print(f"警告：第{i}个子图无边缘，节点数：{subgraph.number_of_nodes()}")
 
     # 拼接批量数据
     gat_inputs = torch.cat(batch_gat_inputs, dim=0).to(device)
