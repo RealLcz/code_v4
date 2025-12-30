@@ -30,7 +30,7 @@ class GATConvE(MessagePassing):
         self.n_etype = n_etype
         # self.edge_encoder = edge_encoder
         self.gnn_edge_dim = args.gnn_edge_dim
-        self.edge_encoder = torch.nn.Sequential(torch.nn.Linear(265, self.gnn_edge_dim), torch.nn.BatchNorm1d(self.gnn_edge_dim), torch.nn.ReLU(), torch.nn.Linear(self.gnn_edge_dim, self.gnn_edge_dim))
+        self.edge_encoder = torch.nn.Sequential(torch.nn.Linear(265, self.gnn_edge_dim), torch.nn.LayerNorm(self.gnn_edge_dim), torch.nn.ReLU(), torch.nn.Linear(self.gnn_edge_dim, self.gnn_edge_dim))
 
         # For attention
         self.head_count = head_count
@@ -45,7 +45,7 @@ class GATConvE(MessagePassing):
         self._alpha = None
 
         # For final MLP
-        self.mlp = torch.nn.Sequential(torch.nn.Linear(emb_dim, emb_dim), torch.nn.BatchNorm1d(emb_dim), torch.nn.ReLU(), torch.nn.Linear(emb_dim, emb_dim))
+        self.mlp = torch.nn.Sequential(torch.nn.Linear(emb_dim, emb_dim), torch.nn.LayerNorm(emb_dim), torch.nn.ReLU(), torch.nn.Linear(emb_dim, emb_dim))
 
     def forward(self, x, edge_index, edge_type, node_type, return_attention_weights=False):
         """
@@ -176,15 +176,6 @@ class GAT(nn.Module):
         # negative_idx = edge_index[(edge_index < 0).any(dim=0)]
         negative_mask = (edge_index < 0).any(dim=0)
         negative_idx = edge_index[:, negative_mask]
-
-        if len(invalid_src_idx) > 0:
-            print(f"❌ 无效源节点索引（超出节点数 {num_nodes}）: {invalid_src_idx.unique().tolist()}")
-        if len(invalid_tgt_idx) > 0:
-            print(f"❌ 无效目标节点索引（超出节点数 {num_nodes}）: {invalid_tgt_idx.unique().tolist()}")
-        if len(negative_idx) > 0:
-            print(f"❌ 负索引: {negative_idx.unique(dim=1).tolist()}")
-        print("=" * 50)
-
 
         if args.use_relational_gnn:
             x = F.dropout(x, p=0.6, training=self.training)

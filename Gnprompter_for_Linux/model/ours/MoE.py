@@ -296,8 +296,7 @@ class MoE(nn.Module):
             expert_outputs = [self.experts[i](expert_inputs[i]) for i in range(self.num_experts)]
             y = dispatcher.combine(expert_outputs)
         except Exception as e:
-            print(f"MoE计算出错: {e}")
-            # 降级为简单的平均专家输出
+            print(f"error of MoE : {e}")
             expert_outputs = [self.experts[i](x) for i in range(self.num_experts)]
             y = torch.mean(torch.stack(expert_outputs), dim=0)
         

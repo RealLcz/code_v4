@@ -44,7 +44,7 @@ def umls_graph_to_pyg_data_subgraph(args, subgraph, tokenizer, model, project_la
     修复点：edge_index格式、动态修改全局映射、重复创建投影层、冗余代码清理
     """
     # 1. 加载全局映射表（提前构建好的，只读不修改）
-    with open("global_mapping.pkl", "rb") as f:
+    with open("global_mapping_umls.pkl", "rb") as f:
         global_mapping = pickle.load(f)
     sem_type2global_idx = global_mapping["sem_type2global_idx"]
     rel_id2global_idx = global_mapping["rel_id2global_idx"]
@@ -119,8 +119,8 @@ def umls_graph_to_pyg_data_subgraph(args, subgraph, tokenizer, model, project_la
     ).to(args.device)
     with torch.no_grad():
         outputs = model(**inputs, output_hidden_states=True)
-        cls_embeds = outputs.hidden_states[-1][:, 0, :]  # [N, 4096]
-        node_embeds = project_layer(cls_embeds)  # [N, 512]
+        cls_embeds = outputs.hidden_states[-1][:, 0, :]  # [N, 2560]
+        node_embeds = project_layer(cls_embeds)  # [N, 1024]
 
     # 10. 构建PyG数据（字段完整，格式符合PyG要求）
     pyg_data = Data(

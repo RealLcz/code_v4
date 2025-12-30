@@ -19,17 +19,17 @@ class RotatEDecoder(nn.Module):
 
     def score(self, entity_emb, head_idx, rel_idx, tail_idx):
         """
-        批量评分：entity_emb [B, N, d], head_idx/rel_idx/tail_idx [B, K]
+       ：entity_emb [B, N, d], head_idx/rel_idx/tail_idx [B, K]
         """
         B, N, d = entity_emb.shape
         K = head_idx.shape[1]
 
-        # 批量索引提取实体嵌入：[B, K, d]
+        # [B, K, d]
         h = entity_emb[torch.arange(B).unsqueeze(1), head_idx]  # [B, K, d]
         t = entity_emb[torch.arange(B).unsqueeze(1), tail_idx]  # [B, K, d]
         r = self.w_relation[rel_idx]  # [B, K, d//2]
 
-        # RotatE核心逻辑
+        # RotatE
         h = h * self.embedding_range / math.sqrt(3.0)
         t = t * self.embedding_range / math.sqrt(3.0)
         re_head, im_head = torch.chunk(h, 2, dim=-1)
@@ -50,7 +50,7 @@ class RotatEDecoder(nn.Module):
 
     def loss(self, entity_emb, pos_triples, neg_triples):
         """
-        批量损失计算：pos_triples [B, K, 3], neg_triples [B, K, neg_size, 3]
+        pos_triples [B, K, 3], neg_triples [B, K, neg_size, 3]
         """
         pos_head, pos_rel, pos_tail = pos_triples  # 解包出来的是 tensor
         B, K = pos_head.shape
@@ -58,16 +58,15 @@ class RotatEDecoder(nn.Module):
         neg_head, neg_rel, neg_tail = neg_triples
         neg_size = neg_head.shape[2]
 
-        # 正样本评分：[B, K]
+        # [B, K]
         pos_score = self.score(entity_emb, pos_head, pos_rel, pos_tail)
 
-        # 负样本评分：reshape为 [B, K*neg_size] → 输出 [B, K*neg_size]
         neg_head = neg_head.reshape(B, -1)
         neg_rel = neg_rel.reshape(B, -1)
         neg_tail = neg_tail.reshape(B, -1)
         neg_score = self.score(entity_emb, neg_head, neg_rel, neg_tail).reshape(B, K, neg_size)
 
-        # 对抗负采样损失
+
         neg_weight = F.softmax(neg_score * self.args.adversarial_temperature, dim=-1).detach()
         neg_loss = -(neg_weight * F.logsigmoid(-neg_score)).sum(dim=-1).mean()
         pos_loss = -F.logsigmoid(pos_score).mean()
@@ -79,7 +78,7 @@ class RotatEDecoder(nn.Module):
 
 def batch_tokenize_text(text_attributes, tokenizer, model, max_len=32, device='cuda'):
     """
-    批量编码实体文本：text_attributes [B, N] → 输出 [B, N, d]
+   text_attributes [B, N] →  [B, N, d]
     """
     B = len(text_attributes)
     N = len(text_attributes[0]) if B > 0 else 0
@@ -125,37 +124,34 @@ class GraphGrasper(nn.Module):
             gnn_layers=args.gnn_layers
         )
 
-        # GAT输出 -> LLM 嵌入维度
         self.projector = nn.Sequential(
-            nn.Linear(args.gnn_out_dim, 2048),
+            nn.Linear(args.gnn_out_dim, 1024),
             nn.GELU(),
-            nn.LayerNorm(2048),
+            nn.LayerNorm(1024),
             # nn.BatchNorm()???
-            nn.Linear(2048, args.llm_emb_dim)
+            nn.Linear(1024, args.llm_emb_dim)
         ).to(self.device)
 
         self.link_decoder = RotatEDecoder(
             args=args,
-            num_rels=args.n_etype,  # 关系数=边类型数
-            h_dim=args.llm_emb_dim  # 多模态嵌入维度=Qwen输出维度
+            num_rels=args.n_etype,
+            h_dim=args.llm_emb_dim
         ).to(self.device)
 
         self.concat_proj = nn.Linear(2 * args.llm_emb_dim, args.llm_emb_dim).to(self.device)
 
     def forward(self, gat_inputs, graphs, text_attributes, triples_list):
         """
-        批量处理多个图谱的多模态嵌入生成
         :param gat_inputs: [B*N, gnn_in_dim]
-        :param graphs: list -> 每个元素都是PyG Data对象（单Batch图谱）
-        :param text_attributes: [B,N] -> 每个batch的文本
-        :param triples_list: list -> 每个元素是单batch的三元组张量[K,3]
+        :param graphs: list -> PyG Data
+        :param text_attributes: [B,N] -> batch
+        :param triples_list: list ->batch  [K,3]
         :return: multimodal_embedding [B, N, llm_emb_dim], link_loss(scalar_
         """
         B = len(graphs)
         N = graphs[0].num_nodes
         llm_dim = self.args.llm_emb_dim
 
-        # 批量处理GAT
         # [B*N, gnn_in_dim] -> [B*N, gnn_out_dim]
         batch_edge_index = []
         batch_edge_type = []
@@ -193,7 +189,7 @@ class GraphGrasper(nn.Module):
             [graph_emb_reshape, text_embedding], dim=-1
         )  # [B, N, 2d]
 
-        # 修复：保持3D形状 [B, N, llm_dim]
+        # [B, N, llm_dim]
         inputs_embeds = self.concat_proj(concat_embedding)  # [B, N, llm_dim]
 
         outputs = self.model.model(
@@ -201,18 +197,15 @@ class GraphGrasper(nn.Module):
             output_hidden_states=True
         )
 
-        # 修复：输出形状处理
         # outputs.last_hidden_state: [B, N, llm_dim]
         multimodal_emb = outputs.last_hidden_state  # [B, N, llm_dim]
         multimodal_embedding = multimodal_emb  # 已经是正确形状
 
-        # 用于 link_loss 的 flat 版本
+        # link_loss flat
         multimodal_emb_flat = multimodal_emb.reshape(B * N, llm_dim)
 
 
         with torch.no_grad():
-            # 5. 批量计算链路损失
-            # 生成每个batch的正负三元组
             pos_triples_batch = []
             neg_triples_batch = []
             for triples in triples_list:
@@ -224,7 +217,7 @@ class GraphGrasper(nn.Module):
                 pos_triples_batch.append(pos_tri)
                 neg_triples_batch.append(neg_tri)
 
-            # 拼接为批量格式：[B, K]（pos）、[B, K, neg_size]（neg）
+            # [B, K]（pos）、[B, K, neg_size]（neg）
             pos_triples = (
                 torch.stack([pt[0] for pt in pos_triples_batch], dim=0),
                 torch.stack([pt[1] for pt in pos_triples_batch], dim=0),
@@ -236,7 +229,6 @@ class GraphGrasper(nn.Module):
                 torch.stack([nt[2] for nt in neg_triples_batch], dim=0)
             )
 
-        # 计算链路损失（输入为 [B*N, d]）
         link_loss = self.link_decoder.loss(
             entity_emb=multimodal_embedding,
             pos_triples=pos_triples,
@@ -244,4 +236,5 @@ class GraphGrasper(nn.Module):
         )
 
         return multimodal_embedding, link_loss
+
 
