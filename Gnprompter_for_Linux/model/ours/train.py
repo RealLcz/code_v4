@@ -65,34 +65,34 @@ parser.add_argument("--link_loss_weight", type=float, default=0.15)
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--batch_size", type=int, default=18)
 
-# 在训练脚本的parser添加以下参数（和其他参数并列）
-parser.add_argument("--moe_input_size", type=int, default=2560)  # 和dim_input一致（Qwen嵌入维度）
-parser.add_argument("--moe_hidden_size", type=int, default=2048)  # 专家网络隐藏层维度（可调整）
-parser.add_argument("--moe_output_size", type=int, default=2560)  # 和输入维度一致（保持维度不变）
-parser.add_argument("--moe_num_experts", type=int, default=8)  # 专家数量（根据GPU显存调整，8/16/32）
-parser.add_argument("--moe_k", type=int, default=4)  # 每个样本选择的专家数（≤num_experts）
-parser.add_argument("--moe_loss_weight", type=float, default=0.1)  # MoE负载均衡损失权重
-parser.add_argument("--save_model_path", type=str, default="./checkpoints/my_model_best")  # 补充保存路径参数（之前缺失）
-parser.add_argument("--max_text_len", type=int, default=32)  # 补充缺失的文本长度参数
-parser.add_argument("--neg_sample_size", type=int, default=10)  # 补充负样本大小参数
+parser.add_argument("--moe_input_size", type=int, default=2560)
+parser.add_argument("--moe_hidden_size", type=int, default=2048)  
+parser.add_argument("--moe_output_size", type=int, default=2560)  
+parser.add_argument("--moe_num_experts", type=int, default=8)  
+parser.add_argument("--moe_k", type=int, default=4)  
+parser.add_argument("--moe_loss_weight", type=float, default=0.1)  
+parser.add_argument("--save_model_path", type=str, default="./checkpoints/my_model_best")
+parser.add_argument("--max_text_len", type=int, default=32) 
+parser.add_argument("--neg_sample_size", type=int, default=10) 
 parser.add_argument("--max_question_len", type=int, default=32)
 parser.add_argument("--kgs", type=str, default=None)
 parser.add_argument("--dataset", type=str, default=None)
+parser.add_argument("--sample_size", type=int, default=2500)
 
 args = parser.parse_args()
 
 
 if args.kgs == "umls":
-    args.graph_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/umls_old/processed_umls_big1500000.pkl"
-    args.index_path = r"/root/autodl-tmp/Gnprompter_for_Linux/model/ours/umls_entity_index_1500000.pkl"
+    args.graph_path = r"/dataset/umls_old/processed_umls_big1500000.pkl"
+    args.index_path = r"umls_entity_index_1500000.pkl"
 
 if args.kgs == "NELL":
-    args.graph_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/NELL/processed_NELL"
-    args.index_path = r"/root/autodl-tmp/Gnprompter_for_Linux/nell_entity_index.pkl"
+    args.graph_path = r"/dataset/NELL/processed_NELL"
+    args.index_path = r"nell_entity_index.pkl"
 
 
 if args.dataset == "PQA":
-    original_json_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/PQA/pqal_fold1/train_set.json"
+    original_json_path = r"/dataset/PQA/pqal_fold1/train_set.json"
     processed_data = load_and_map_labels(original_json_path)
     save_to_csv(processed_data)
     save_to_jsonl(processed_data)
@@ -104,8 +104,8 @@ if args.dataset == "PQA":
     )
 
 if args.dataset == "PIQA":
-    original_json_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/PIQA/processed_piqa.jsonl"
-    processed_data = load_processed_piqa(original_json_path, sample_size=500)
+    original_json_path = r"/dataset/PIQA/processed_piqa.jsonl"
+    processed_data = load_processed_piqa(original_json_path, sample_size=args.sample_size)
     full_dataset = save_torch_dataset_piqa(processed_data)
     train_loader, val_loader, test_loader = get_loaders_from_existing_dataset_piqa(
         full_dataset=full_dataset,
@@ -114,8 +114,8 @@ if args.dataset == "PIQA":
     )
 
 if args.dataset == "Riddle":
-    original_json_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/Riddle/processed_Riddle.jsonl"
-    processed_data = load_processed_riddle(original_json_path, sample_size=500)
+    original_json_path = r"/dataset/Riddle/processed_Riddle.jsonl"
+    processed_data = load_processed_riddle(original_json_path, sample_size=args.sample_size)
     full_dataset = save_torch_dataset_riddle(processed_data)
     train_loader, val_loader, test_loader = get_loaders_from_existing_dataset_riddle(
         full_dataset=full_dataset,
@@ -124,10 +124,10 @@ if args.dataset == "Riddle":
     )
 
 if args.dataset == "BioASQ":
-    original_json_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/BioASQ/trainining14b.json"
-    output_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/BioASQ/processed_bioasq.jsonl"
+    original_json_path = r"/dataset/BioASQ/trainining14b.json"
+    output_path = r"/dataset/BioASQ/processed_bioasq.jsonl"
     process_bioasq(original_json_path, output_path)
-    processed_data = load_processed_bioasq(output_path, 500)
+    processed_data = load_processed_bioasq(output_path, args.sample_size)
     full_dataset = save_torch_dataset_bioasq(processed_data)
     train_loader, val_loader, test_loader = get_loaders_from_existing_dataset_bioasq(
         full_dataset=full_dataset,
@@ -136,10 +136,10 @@ if args.dataset == "BioASQ":
     )
 
 if args.dataset == "OBQA":
-    input_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/obqa/train-00000-of-00001.parquet"
-    output_path = r"/root/autodl-tmp/Gnprompter_for_Linux/dataset/obqa/processed_obqa.jsonl"
+    input_path = r"/dataset/obqa/train-00000-of-00001.parquet"
+    output_path = r"/dataset/obqa/processed_obqa.jsonl"
     process_obqa(input_path, output_path)
-    processed_data = load_processed_obqa(output_path, 500)
+    processed_data = load_processed_obqa(output_path, args.sample_size)
     full_dataset = save_torch_dataset_OBQA(processed_data)
     train_loader, val_loader, test_loader = get_loaders_from_existing_dataset_obqa(
         full_dataset=full_dataset,
