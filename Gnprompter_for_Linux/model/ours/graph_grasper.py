@@ -52,7 +52,7 @@ class RotatEDecoder(nn.Module):
         """
         pos_triples [B, K, 3], neg_triples [B, K, neg_size, 3]
         """
-        pos_head, pos_rel, pos_tail = pos_triples  # 解包出来的是 tensor
+        pos_head, pos_rel, pos_tail = pos_triples 
         B, K = pos_head.shape
 
         neg_head, neg_rel, neg_tail = neg_triples
@@ -86,7 +86,6 @@ def batch_tokenize_text(text_attributes, tokenizer, model, max_len=32, device='c
     # flat_text = text_attributes.reshape(-1)  # [B*N]
     flat_text = [text for batch in text_attributes for text in batch]
 
-    # 批量编码
     inputs = tokenizer(
         flat_text,
         padding=True,
@@ -199,7 +198,7 @@ class GraphGrasper(nn.Module):
 
         # outputs.last_hidden_state: [B, N, llm_dim]
         multimodal_emb = outputs.last_hidden_state  # [B, N, llm_dim]
-        multimodal_embedding = multimodal_emb  # 已经是正确形状
+        multimodal_embedding = multimodal_emb 
 
         # link_loss flat
         multimodal_emb_flat = multimodal_emb.reshape(B * N, llm_dim)
