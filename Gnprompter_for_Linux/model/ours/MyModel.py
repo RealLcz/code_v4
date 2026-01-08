@@ -11,7 +11,6 @@ class QuestionEmbeder(nn.Module):
         self.args = args
         self.tokenizer = tokenizer
         self.model = model
-        # 冻结嵌入层
         for param in self.model.parameters():
             param.requires_grad = False
 
@@ -19,7 +18,6 @@ class QuestionEmbeder(nn.Module):
         """
         ：question_text [B,] → 输出 [B, seq_len_q, d]
         """
-        # 批量编码
         inputs = self.tokenizer(
             question_text,
             padding=True,
@@ -40,7 +38,6 @@ class CrossAttention(nn.Module):
         self.d_model = args.dim_input
         assert args.moe_input_size == self.d_model
 
-        # 批量交叉注意力层
         self.transformer_decoder = nn.TransformerDecoder(
             nn.TransformerDecoderLayer(
                 d_model=self.d_model,
@@ -52,7 +49,6 @@ class CrossAttention(nn.Module):
             num_layers=args.cross_attention_layers
         )
 
-        # 批量MoE
         self.moe = MoE(
             input_size=self.d_model,
             hidden_size=args.moe_hidden_size,
