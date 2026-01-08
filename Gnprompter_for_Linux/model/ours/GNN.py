@@ -12,9 +12,7 @@ from torch_scatter import scatter
 
 
 def make_one_hot(labels, C):
-    # 确保labels是长整型张量
     labels = labels.long()
-    # 使用内置的one_hot函数
     one_hot = F.one_hot(labels, num_classes=C).float()
     return one_hot
 
@@ -163,13 +161,6 @@ class GAT(nn.Module):
             self.end_conv = GATConv(hidden_channels * heads, out_channels, heads=1, concat=False, dropout=0.6)
 
     def forward(self, args, x, edge_index, edge_type, node_type):
-        # print("=" * 50)
-        # print(f"node_type 尺寸: {node_type.size()}")  # 应该是 [N,]，N是节点数
-        # print(f"edge_index 尺寸: {edge_index.size()}")  # 应该是 [2, E]，E是边数
-        # print(f"edge_index[0]（源节点索引）范围: [{edge_index[0].min().item()}, {edge_index[0].max().item()}]")
-        # print(f"edge_index[1]（目标节点索引）范围: [{edge_index[1].min().item()}, {edge_index[1].max().item()}]")
-
-        # 校验源节点索引是否超出 node_type 的尺寸（核心校验）
         num_nodes = node_type.size(0)
         invalid_src_idx = edge_index[0][edge_index[0] >= num_nodes]
         invalid_tgt_idx = edge_index[1][edge_index[1] >= num_nodes]
