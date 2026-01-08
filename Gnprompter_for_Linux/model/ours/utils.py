@@ -59,7 +59,6 @@ def fast_extract_matched_entities(question_text, index_path="umls_entity_index_1
     if not question_text or not index_path:
         return []
 
-    # 1. 加载索引（比加载整个UMLS图谱快10倍+）
     try:
         with open(index_path, "rb") as f:
             data = pickle.load(f)
@@ -146,7 +145,6 @@ def map_keywords_to_cuis_new(batch_keywords, name_to_cuis):
 
 def get_2hop_subgraph(G, matched_cuis, max_nodes=50):
     try:
-        # 输入验证
         if G is None:
             print("error")
             return G
@@ -204,7 +202,7 @@ def get_2hop_subgraph(G, matched_cuis, max_nodes=50):
             return subgraph
         except Exception as e:
             print(f"error: {e}")
-            return G.subgraph([]).copy()  # 返回空图
+            return G.subgraph([]).copy() 
     except Exception as e:
         print(f"2hgraph error: {e}")
         return G.subgraph([]).copy() if G else None
@@ -213,7 +211,6 @@ def get_2hop_subgraph(G, matched_cuis, max_nodes=50):
 # data_processing/umls_utils.py
 def batch_get_2hop_subgraph(full_graph, batch_matched_cuis, max_nodes=500):
     try:
-        # 输入验证
         if full_graph is None:
             return [full_graph.subgraph([]).copy() if full_graph else None for _ in batch_matched_cuis]
         if not isinstance(batch_matched_cuis, list):
